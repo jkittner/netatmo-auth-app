@@ -1,3 +1,5 @@
+[![pre-commit](https://github.com/jkittner/netatmo-auth-app/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/jkittner/netatmo-auth-app/actions?query=workflow%3Apre-commit)
+
 # netatmo-auth-app
 
 ## installation
