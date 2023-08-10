@@ -1,0 +1,11 @@
+*.egg-info
+*.pyc
+.coverage
+.mypy_cache
+.netatmo_token
+.pytest_cache
+.tox
+.vscode
+_build
+app.json
+htmlcov
