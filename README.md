@@ -26,14 +26,14 @@ pip install git+https://github.com/jkittner/netatmo-auth-app
       ```json
       {
         "name": "<name of the app>",
-        "redirect_uri": "http://localhost:5000/oauth_redirect",
+        "redirect_uri": "http://localhost:5000/auth-callback",
         "client_id": "<client_id>",
         "client_secret": "<client_secret>"
       }
       ```
     - set the file permissions to `-rw-------`
       ```bash
-      chmod 600 app.json
+      chmod 600 netatmo_app.json
       ```
     - the `redirect_uri` must match your netatmo app's settings
 1.  run the app
@@ -54,6 +54,7 @@ pip install git+https://github.com/jkittner/netatmo-auth-app
 
 1.  a file called `.netatmo_token` is now created in your current working directory,
     which will contain the access token, the refresh token, and the expiry timestamp.
+    **Make sure you never check in this file -- add it to your `.gitignore`**
 
 1.  You can use the token in your scripts like this:
 
