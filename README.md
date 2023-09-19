@@ -1,4 +1,4 @@
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/jkittner/netatmo-auth-app/main.svg?badge_token=FJQjca9PRQ2l7uXddeKYRQ)](https://results.pre-commit.ci/latest/github/jkittner/netatmo-auth-app/main?badge_token=FJQjca9PRQ2l7uXddeKYRQ)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/jkittner/netatmo-auth-app/main.svg)](https://results.pre-commit.ci/latest/github/jkittner/netatmo-auth-app/main)
 
 # netatmo-auth-app
 
