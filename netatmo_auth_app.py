@@ -9,6 +9,7 @@ from datetime import timedelta
 from datetime import timezone
 from hmac import compare_digest
 from secrets import token_hex
+from secrets import token_urlsafe
 from typing import NamedTuple
 
 import requests
@@ -17,11 +18,9 @@ from flask import Flask
 from flask import redirect
 from flask import render_template_string
 from flask import request
+from flask import Response
 from flask import session
 from flask import url_for
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'b58573856383a1529896a766cc1f5a658aad1e9244bf3bae0d9460b1698eda5dc5803f36628ebe9651ed'  # noqa: E501
 
 
 class NetatmoApp(NamedTuple):
@@ -32,8 +31,16 @@ class NetatmoApp(NamedTuple):
 
     @classmethod
     def from_json(cls, fname: str) -> NetatmoApp:
-        with open(fname) as f:
-            return cls(**json.load(f))
+        try:
+            with open(fname) as f:
+                if oct(os.stat(fname).st_mode) != '0o100600':
+                    print(f'WARNING: {fname!r} has unsafe permissions!')
+                return cls(**json.load(f))
+        except FileNotFoundError:
+            raise SystemExit(
+                f'a file called {fname!r} must exist in the current working '
+                f'directory: {os.getcwd()}',
+            )
 
 
 @dataclass
@@ -48,8 +55,8 @@ class OAuth2Token:
         return datetime.now(tz=timezone.utc) > expires_dt
 
     @classmethod
-    def from_file(cls, fname: str = '.netatmo_token') -> OAuth2Token:
-        with open(fname) as f:
+    def from_file(cls) -> OAuth2Token:
+        with open('.netatmo_token') as f:
             return cls(**json.load(f))
 
     def to_json(self, fname: str) -> None:
@@ -81,25 +88,20 @@ class OAuth2Token:
         self.to_json('.netatmo_token')
 
 
-NETATMO_APP = NetatmoApp.from_json('app.json')
+NETATMO_APP = NetatmoApp.from_json('netatmo_app.json')
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or token_hex(69)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 
-@app.route('/', methods=['POST', 'GET'])
+@app.route('/')
 def index() -> str:
-    state = token_hex(69)
-    session['state'] = state
     token = None
     if os.path.exists('.netatmo_token'):
         token = OAuth2Token.from_file()
-
-    if request.method == 'POST':
-        return redirect(
-            f'https://api.netatmo.com/oauth2/authorize?'
-            f'client_id={ NETATMO_APP.client_id }&'
-            f'redirect_uri={ NETATMO_APP.redirect_uri }&'
-            f'scope=read_station&'
-            f'state={ state }',
-        )
     return render_template_string(
         '''\
 <!DOCTYPE html>
@@ -110,51 +112,102 @@ def index() -> str:
     <title>Netatmo Auth App</title>
   </head>
   <style>
+    body {
+      font-family: "Helvetica", "Arial", sans-serif;
+    }
+    .button {
+      background-color: #0d6efd;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      padding: 8px;
+      font-size: 1rem;
+    }
+    .button:hover {
+      background-color: #205fbd;
+    }
     .blurry {
       filter: blur(6px);
       cursor: pointer;
     }
     .flash {
-      border: 1px solid black;
+      width: max-content;
+      max-width: 85%;
+      border: 1px solid #205fbd;
       border-radius: 10px;
       text-align: center;
-      padding-top: 5px;
-      padding-bottom: 5px;
+      padding: 5px;
+      padding-left: 20px;
+      padding-right: 20px;
+      margin: auto;
+      margin-top: 1rem;
+      margin-bottom: 1rem;
+      background-color: #0d6efd44;
+    }
+    .boxed {
+      margin: auto;
+      width: max-content;
+      max-width: 85%;
+      border: 1px solid black;
+      border-radius: 10px;
+      padding: 6px;
     }
   </style>
   <body>
     <div style="text-align: center">
+      <h1>Netatmo Auth App</h1>
       {% with messages = get_flashed_messages() %}
         {% if messages %}
-          <ul class="flashes">
-            {% for message in messages %}
-              <p class="flash">{{ message }}</p>
-            {% endfor %}
-          </ul>
+          {% for message in messages %}
+            <p class="flash">{{ message }}</p>
+          {% endfor %}
         {% endif %}
       {% endwith %}
-      <h1>Authorize App</h1>
-      <form method="post" action="" style="margin-bottom: 25px">
-        <input type="submit" value="Login to Netatmo" />
-      </form>
-      {% if token is not none %}
-        <li>
-          <b>Access Token:</b>
-          <span class="blurry" onclick="show(this);">{{ token.access_token }}</span>
-          (click to show)
-        </li>
-        <li>
-          <b>Refresh Token</b>:
-          <span class="blurry" onclick="show(this);">{{ token.refresh_token }}</span>
-          (click to show)
-        </li>
-        <li><b>Expires</b>: {{ token.expires }}</li>
-        <form method="post" action="/refresh_token" style="margin-top: 25px">
-          <input
-            type="submit"
-            value="Refresh this token (expires: {{ token.expires }})"
-          />
-        </form>
+      {% if token is none %}
+        <a href="{{ url_for('oauth_authorize') }}"
+          ><button class="button">Login with Netatmo</button></a
+        >
+      {% else %}
+        <div class="boxed">
+          <h3 style="margin: 3px">{{ app.name }}</h3>
+          <hr />
+          <p>
+            <b>Access Token:</b>
+            <span class="boxed" style="margin-right: 5px; margin-left: 3px">
+              <span class="blurry" onclick="show(this);"
+                ><code>{{ token.access_token }}</code></span
+              >
+            </span>
+            (click to show)
+            <button class="button" onclick="copyToClipboard('{{ token.access_token }}')">
+              copy
+            </button>
+          </p>
+          <p>
+            <b>Refresh Token</b>:
+            <span class="boxed" style="margin-right: 5px; margin-left: 3px">
+              <span class="blurry" onclick="show(this);"
+                ><code>{{ token.refresh_token }}</code></span
+              >
+            </span>
+            (click to show)
+            <button class="button" onclick="copyToClipboard('{{ token.refresh_token }}')">
+              copy
+            </button>
+          </p>
+          <b>Expires</b>: <span id="expiry">{{ token.expires }}</span>
+          <form method="post" action="/refresh_token">
+            <input
+              style="margin: 3px"
+              class="button"
+              type="submit"
+              value="Refresh this Token"
+            />
+          </form>
+          <a href="{{ url_for('oauth_logout') }}"
+            ><button class="button">Logout</button></a
+          >
+        </div>
       {% endif %}
       <script>
         function show(element) {
@@ -164,26 +217,57 @@ def index() -> str:
             element.classList.add("blurry");
           }
         }
+        async function copyToClipboard(text) {
+          console.log("hey");
+          await navigator.clipboard.writeText(text);
+          console.log("hey after");
+        }
+      let timestamp_element = document.getElementById("expiry");
+      if (timestamp_element != null) {
+        const timestamp = parseInt(timestamp_element.innerHTML) * 1000;
+        const date = new Date(timestamp);
+        timestamp_element.innerHTML = date.toLocaleString()
+      }
       </script>
     </div>
   </body>
 </html>
 ''',  # noqa: E501
         token=token,
+        app=NETATMO_APP,
     )
 
 
-@app.route('/oauth_redirect')
-def oauth_redirect() -> str:
+@app.route('/login')
+def oauth_authorize() -> Response:
+    session['state'] = token_urlsafe(69)
+    return redirect(
+        f'https://api.netatmo.com/oauth2/authorize?'
+        f'client_id={NETATMO_APP.client_id}&'
+        f'redirect_uri={NETATMO_APP.redirect_uri}&'
+        f'scope=read_station&'
+        f'state={session["state"]}',
+    )
+
+
+@app.route('/logout')
+def oauth_logout() -> Response:
+    os.remove('.netatmo_token')
+    flash('Successfully Logged Out!')
+    return redirect(url_for('index'))
+
+
+@app.route('/auth-callback')
+def oauth_callback() -> str:
     state = request.args['state']
     if 'code' not in request.args:
-        flash(f'did not get token: {request.args["error"]}')
+        flash(f'Did not get Token: {request.args["error"]}')
         return (redirect(url_for('index')))
 
     code = request.args['code']
     # something went wrong - we do not trust the request (CSRF?)
     if not compare_digest(state, session['state']):
-        flash('comparing the state failed')
+        flash('Comparing the oauth2 state failed, CSRF?')
         return (redirect(url_for('index')))
 
     data = {
@@ -215,17 +299,17 @@ def oauth_redirect() -> str:
             expires=int(expires.timestamp()),
         )
         token.to_json('.netatmo_token')
-        flash('created new token')
+        flash('Created new Token')
         return redirect(url_for('index'))
 
 
 @app.route('/refresh_token', methods=['POST'])
 def refresh_token() -> str:
-    token = OAuth2Token.from_file('.netatmo_token')
+    token = OAuth2Token.from_file()
     token.refresh()
-    flash('successfully refreshed token!', category='success')
+    flash('Successfully refreshed Token!')
     return redirect(url_for('index'))
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()

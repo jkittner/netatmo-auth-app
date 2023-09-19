@@ -1,6 +1,8 @@
-[![pre-commit](https://github.com/jkittner/netatmo-auth-app/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/jkittner/netatmo-auth-app/actions?query=workflow%3Apre-commit)
+[![pre-commit](https://github.com/jkittner/netatmo-auth-app/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/jkittner/netatmo-auth-app/actions/workflows/pre-commit.yaml)
 
 # netatmo-auth-app
+
+An example oauth2 workflow for using the netatmo API.
 
 ## installation
 
@@ -19,8 +21,8 @@ pip install git+https://github.com/jkittner/netatmo-auth-app
 ## usage
 
 1.  setup your app
-    - create a file called `app.json` with this structure in your current working
-      directory
+    - create a file called `netatmo_app.json` with this structure in your current
+      working directory
       ```json
       {
         "name": "<name of the app>",
@@ -33,14 +35,13 @@ pip install git+https://github.com/jkittner/netatmo-auth-app
       ```bash
       chmod 600 app.json
       ```
-    - the `redirect_uri` must be set in your app's settings and match the one configured
-      in this file
+    - the `redirect_uri` must match your netatmo app's settings
 1.  run the app
-    - in the terminal run to start the web-app:
+    - in the terminal run to start the web app:
       ```bash
       netatmo-auth-app
       ```
-    - open your browser at http://localhost:5000
+    - open your browser at http://127.0.0.1:5000
 1.  log into your account
 
     1. click _Login to Netatmo_. You will be redirected to the Netatmo page
@@ -49,8 +50,7 @@ pip install git+https://github.com/jkittner/netatmo-auth-app
     1. You will be redirected to the local authorization app which now has an access
        token and a refresh token (blurred for your safety). You have to click on the
        blur to remove it and show the token in plain text.
-    1. A button shows up, which you can use to refresh the token (when it expired or to
-       prolong the lifetime)
+    1. A button shows up, which you can use to refresh the token
 
 1.  a file called `.netatmo_token` is now created in your current working directory,
     which will contain the access token, the refresh token, and the expiry timestamp.
