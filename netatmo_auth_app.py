@@ -218,9 +218,7 @@ def index() -> str:
           }
         }
         async function copyToClipboard(text) {
-          console.log("hey");
           await navigator.clipboard.writeText(text);
-          console.log("hey after");
         }
       let timestamp_element = document.getElementById("expiry");
       if (timestamp_element != null) {
