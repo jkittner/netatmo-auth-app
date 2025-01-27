@@ -41,7 +41,8 @@ pip install git+https://github.com/jkittner/netatmo-auth-app
       ```bash
       netatmo-auth-app
       ```
-    - open your browser at http://127.0.0.1:5000
+    - the browser should automatically open the app. If not open your browser at
+      http://127.0.0.1:5000 (the same as specified in `netatmo_app.json`)
 1.  log into your account
 
     1. click _Login to Netatmo_. You will be redirected to the Netatmo page
