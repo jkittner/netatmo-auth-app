@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.parse
+import webbrowser
 from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -95,6 +97,9 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or token_hex(69)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+base_url = urllib.parse.urlsplit(NETATMO_APP.redirect_uri)
+webbrowser.open(f'{base_url.scheme}://{base_url.netloc}')
 
 
 @app.route('/')
