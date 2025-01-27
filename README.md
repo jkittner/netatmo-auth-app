@@ -26,7 +26,7 @@ pip install git+https://github.com/jkittner/netatmo-auth-app
       ```json
       {
         "name": "<name of the app>",
-        "redirect_uri": "http://localhost:5000/auth-callback",
+        "redirect_uri": "http://127.0.0.1:5000/auth-callback",
         "client_id": "<client_id>",
         "client_secret": "<client_secret>"
       }
